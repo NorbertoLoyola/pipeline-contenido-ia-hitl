@@ -1,0 +1,909 @@
+{
+  "name": "Pipeline de Contenido Autónomo con HITL",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "authentication": "airtableTokenApi",
+        "baseId": {
+          "__rl": true,
+          "value": "appdyCkkGaamx9XTL",
+          "mode": "id"
+        },
+        "tableId": {
+          "__rl": true,
+          "value": "tblndzZAo2NVRlBb5",
+          "mode": "id"
+        },
+        "triggerField": "=Last Modified",
+        "additionalFields": {}
+      },
+      "id": "4b3b288f-ac38-4b97-b53e-fac472dbc6be",
+      "name": "Airtable Trigger – Pipeline de Contenidos",
+      "type": "n8n-nodes-base.airtableTrigger",
+      "typeVersion": 1,
+      "position": [
+        -48,
+        -64
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "Y3dyIw49pOZvA0lS",
+          "name": "Airtable account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond-status",
+              "leftValue": "={{ $json.fields.Status }}",
+              "rightValue": "Generando",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "cond-idea",
+              "leftValue": "={{ $json.fields['Idea Semilla'] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e0d36a23-d187-4500-864b-756f7fa1b12b",
+      "name": "Filter – Validar Status y Idea Semilla",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [
+        224,
+        -64
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appdyCkkGaamx9XTL",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblbUAQF9DTuzA1gC",
+          "mode": "id"
+        },
+        "filterByFormula": "AND({Activo} = TRUE())",
+        "options": {}
+      },
+      "id": "cadc8891-d79b-4d36-bf9c-96f5694b6925",
+      "name": "RAG – Recuperar Directrices de Marca",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2,
+      "position": [
+        480,
+        -64
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "Y3dyIw49pOZvA0lS",
+          "name": "Airtable account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const trigger = $('Airtable Trigger – Pipeline de Contenidos').first().json;\nconst inputs = $input.all().map(item => item.json);\nconst ideaSemilla = trigger.fields['Idea Semilla'];\nconst recordId = trigger.id;\n\nconst guidelinesText = inputs.map((item, i) => {\n  const nombreDirectriz = item['Directriz'] || 'Manual de Estilo Corporativo';\n  const contenido = item['Contenido RAG'] || 'Sin contenido';\n  return `--- Directriz ${i + 1}: ${nombreDirectriz} ---\\n${contenido}`;\n}).join('\\n\\n');\n\nreturn [{\n  json: {\n    recordId,\n    ideaSemilla,\n    guidelinesText,\n    systemPrompt: `Eres un experto en marketing de contenido B2B especializado en LinkedIn. Tu tarea es diseñar posts de alto impacto siguiendo ESTRICTAMENTE las directrices de marca proporcionadas.\\n\\nDIRECTRICES DE MARCA (RAG):\\n${guidelinesText}\\n\\nREGLAS ABSOLUTAS:\\n- Respeta el tono profesional pero cercano, directo y sin rodeos.\\n- Estructura usando viñetas claras.\\n- Evita adjetivos exagerados como 'revolucionario' o 'disruptivo'.\\n- Cierra siempre con un llamado a la acción al final.\\n\\nCOMPORTAMIENTO DE SALIDA CRÍTICO:\\nDebes responder ÚNICAMENTE con un objeto JSON válido, sin textos introductorios, sin saludos, ni bloques de código markdown. El formato debe ser exactamente este:\\n{\\n  \"titulo\": \"Aquí el título gancho para LinkedIn\",\\n  \"cuerpo\": \"Aquí todo el resto del desarrollo del post con sus viñetas y CTA\"\\n}`,\n    userPrompt: `Genera la estructura JSON para un post de LinkedIn a partir de la siguiente Idea Semilla:\\n\\n\"${ideaSemilla}\"`\n  }\n}];"
+      },
+      "id": "5f2d1639-b8cd-4c87-8272-c53ed9c798fe",
+      "name": "Preparar Contexto RAG para AI Agent",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        736,
+        -64
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.userPrompt }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "={{ $json.systemPrompt }}\n\nIMPORTANTE: Tu respuesta debe ser EXCLUSIVAMENTE el objeto JSON que solicita el Output Parser. No agregues introducciones, no agregues saludos, ni texto antes o después del bloque de código. Responde directo con el formato solicitado."
+        }
+      },
+      "id": "4fa89af8-4010-4dc3-8eeb-cfc0749c1870",
+      "name": "AI Agent – Redactor LinkedIn (Claude 3.5 Sonnet)",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        992,
+        -64
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appdyCkkGaamx9XTL",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblndzZAo2NVRlBb5",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Aprobado": true,
+            "Contenido Generado": "={{ $json.output.titulo.toUpperCase() }}\n\n{{ $json.output.cuerpo }}",
+            "Status": "Pendiente de Aprobación",
+            "id": "={{ $('Airtable Trigger – Pipeline de Contenidos').item.json.id }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Idea Semilla",
+              "displayName": "Idea Semilla",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Generando",
+                  "value": "Generando"
+                },
+                {
+                  "name": "Pendiente de Aprobación",
+                  "value": "Pendiente de Aprobación"
+                },
+                {
+                  "name": "Publicado",
+                  "value": "Publicado"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Contenido Generado",
+              "displayName": "Contenido Generado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Aprobado",
+              "displayName": "Aprobado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Last Modified",
+              "displayName": "Last Modified",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "cbe7983b-2bd6-4168-9cce-353db4f6b8c4",
+      "name": "Airtable Update – Guardar Contenido Generado (Sin tocar Aprobado)",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2,
+      "position": [
+        1280,
+        -64
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "Y3dyIw49pOZvA0lS",
+          "name": "Airtable account"
+        }
+      },
+      "notes": "PUNTO DE PAUSA HITL: Este nodo escribe el contenido generado pero NO modifica el campo 'Aprobado' (Checkbox). El checkbox permanece en FALSE por defecto, congelando el avance automatizado hasta que un humano lo active manualmente en Airtable."
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "authentication": "airtableTokenApi",
+        "baseId": {
+          "__rl": true,
+          "value": "appdyCkkGaamx9XTL",
+          "mode": "id"
+        },
+        "tableId": {
+          "__rl": true,
+          "value": "tblndzZAo2NVRlBb5",
+          "mode": "id"
+        },
+        "triggerField": "Last Modified",
+        "additionalFields": {}
+      },
+      "id": "eb66a377-50a8-4619-ab96-c617c63291d0",
+      "name": "Airtable Trigger – Escucha Aprobación Manual (HITL)",
+      "type": "n8n-nodes-base.airtableTrigger",
+      "typeVersion": 1,
+      "position": [
+        -48,
+        336
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "Y3dyIw49pOZvA0lS",
+          "name": "Airtable account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond-aprobado",
+              "leftValue": "={{ $json.fields.Aprobado }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "cond-status-pendiente",
+              "leftValue": "={{ $json.fields.Status }}",
+              "rightValue": "Pendiente de Aprobación",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "cond-contenido-existe",
+              "leftValue": "={{ $json.fields['Contenido Generado'] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "fd7253fb-11d5-46ae-8b89-71955c4c1759",
+      "name": "Filter – Aprobado IGUAL TRUE (Control HITL)",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [
+        224,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const record = $input.first().json;\nconst contenido = record.fields['Contenido Generado'];\nconst recordId = record.id;\nconst ideaSemilla = record.fields['Idea Semilla'];\nconst autor = record.fields['Autor'] || 'Cuenta Principal';\n\n// Detectamos si subiste la imagen en la nueva columna de Airtable\nconst imagenesAttachment = record.fields['Imagen'] || [];\nconst tieneImagen = imagenesAttachment.length > 0;\nconst urlImagen = tieneImagen ? imagenesAttachment[0].url : null;\n\n// Armamos la estructura base para LinkedIn\nconst postPayload = {\n  author: `urn:li:person:www.linkedin.com/in/norberto-loyola`, // Recordá que acá irá tu ID de perfil real\n  lifecycleState: 'PUBLISHED',\n  specificContent: {\n    'com.linkedin.ugc.ShareContent': {\n      shareCommentary: {\n        text: contenido\n      },\n      // Si hay imagen cambia a 'IMAGE', de lo contrario se publica como texto plano ('NONE')\n      shareMediaCategory: tieneImagen ? 'IMAGE' : 'NONE'\n    }\n  },\n  visibility: {\n    'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC'\n  }\n};\n\n// Si hay una imagen válida en Airtable, se la inyectamos al paquete de LinkedIn\nif (tieneImagen) {\n  postPayload.specificContent['com.linkedin.ugc.ShareContent'].media = [\n    {\n      status: 'READY',\n      description: {\n        text: ideaSemilla || 'Post de Contenido Automático'\n      },\n      originalUrl: urlImagen,\n      title: {\n        text: 'Imagen del Post'\n      }\n    }\n  ];\n}\n\nreturn [{\n  json: {\n    recordId,\n    ideaSemilla,\n    autor,\n    contenido,\n    postPayload,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "843495da-9759-4282-8fa6-15788ab70961",
+      "name": "Preparar Payload LinkedIn",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appdyCkkGaamx9XTL",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblndzZAo2NVRlBb5",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Status": "Publicado",
+            "id": "={{ $('Airtable Trigger – Escucha Aprobación Manual (HITL)').item.json.id }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Idea Semilla",
+              "displayName": "Idea Semilla",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Generando",
+                  "value": "Generando"
+                },
+                {
+                  "name": "Pendiente de Aprobación",
+                  "value": "Pendiente de Aprobación"
+                },
+                {
+                  "name": "Publicado",
+                  "value": "Publicado"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Contenido Generado",
+              "displayName": "Contenido Generado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Aprobado",
+              "displayName": "Aprobado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Last Modified",
+              "displayName": "Last Modified",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Imagen",
+              "displayName": "Imagen",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "e6976fd7-5c3b-4071-9760-533233ef8b83",
+      "name": "Airtable Update – Marcar como Publicado",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2,
+      "position": [
+        1008,
+        320
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "Y3dyIw49pOZvA0lS",
+          "name": "Airtable account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const record = $input.first().json;\nconsole.log(`[PIPELINE SUCCESS] Post publicado exitosamente en LinkedIn para el registro ${$('Preparar Payload LinkedIn').first().json.recordId}`);\n\nreturn [{\n  json: {\n    success: true,\n    recordId: $('Preparar Payload LinkedIn').first().json.recordId,\n    ideaSemilla: $('Preparar Payload LinkedIn').first().json.ideaSemilla,\n    linkedinResponse: $('HTTP Request – Publicar en LinkedIn API').first().json,\n    pipelineCompletedAt: new Date().toISOString(),\n    message: 'Pipeline HITL completado: Contenido generado por IA, aprobado por humano y publicado en LinkedIn.'\n  }\n}];"
+      },
+      "id": "3003e262-a856-4371-82c8-3f729a2506e7",
+      "name": "Log – Pipeline HITL Completado con Éxito",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1280,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        864,
+        144
+      ],
+      "id": "369409b7-13e5-4d32-b185-63c4e586f8dc",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "G5WeZko6IbVJg9dV",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appdyCkkGaamx9XTL",
+          "mode": "list",
+          "cachedResultName": "Creación de base para Pipeline de Contenido",
+          "cachedResultUrl": "https://airtable.com/appdyCkkGaamx9XTL"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblndzZAo2NVRlBb5",
+          "mode": "list",
+          "cachedResultName": "Pipeline de Contenidos",
+          "cachedResultUrl": "https://airtable.com/appdyCkkGaamx9XTL/tblndzZAo2NVRlBb5"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Airtable Trigger – Escucha Aprobación Manual (HITL)').item.json.id }}",
+            "Status": "Fallo de Conexión / Revisar API"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Idea Semilla",
+              "displayName": "Idea Semilla",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Generando",
+                  "value": "Generando"
+                },
+                {
+                  "name": "Pendiente de Aprobación",
+                  "value": "Pendiente de Aprobación"
+                },
+                {
+                  "name": "Publicado",
+                  "value": "Publicado"
+                },
+                {
+                  "name": "Fallo de Conexión / Revisar API",
+                  "value": "Fallo de Conexión / Revisar API"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Contenido Generado",
+              "displayName": "Contenido Generado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Aprobado",
+              "displayName": "Aprobado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Last Modified",
+              "displayName": "Last Modified",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Imagen",
+              "displayName": "Imagen",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        1008,
+        544
+      ],
+      "id": "26f87e91-ae0d-4acf-89c4-4829bdd5970a",
+      "name": "Update record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "Y3dyIw49pOZvA0lS",
+          "name": "Airtable account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"titulo\": \"Aquí el título gancho para LinkedIn\",\n  \"cuerpo\": \"Aquí todo el resto del desarrollo del post con sus viñetas y CTA\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1168,
+        144
+      ],
+      "id": "44ec7a22-3f2e-4911-a08e-538ac63ba64d",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "fromEmail": "norbertoloyola@gmail.com",
+        "toEmail": "norbertoloyola@gmail.com",
+        "subject": "🚨 REVISIÓN REQUERIDA: Nuevo Post de LinkedIn Generado por IA",
+        "html": "<p>Hola Norberto,</p>\n\n   <p>El Agente de IA ha redactado una nueva propuesta basada en la idea semilla que ingresaste.</p>\n\n   <p>El contenido ya se encuentra estructurado en tu base de datos de Airtable con el estado actual de <strong>\"Pendiente de Aprobación\"</strong>. Por favor, ingresá a la plataforma para validar el texto y adjuntar la imagen antes de su publicación definitiva.</p>\n\n   <br>\n   <p>Saludos,<br><strong>Tu Ecosistema de IA Autónomo</strong></p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1536,
+        -64
+      ],
+      "id": "7092a9a9-61f4-4969-9b55-fdbf019c3871",
+      "name": "Envia mail de aviso",
+      "webhookId": "b8bb105f-9fad-4f4b-9e31-3cbf903a74ee",
+      "credentials": {
+        "smtp": {
+          "id": "pEugAsgXsXLs3J3L",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.linkedin.com/v2/ugcPosts",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.postPayload }}",
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        688,
+        336
+      ],
+      "id": "8ec938b0-eec2-43fc-a63c-65db07fd3176",
+      "name": "HTTP Request",
+      "onError": "continueErrorOutput"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Airtable Trigger – Pipeline de Contenidos": {
+      "main": [
+        [
+          {
+            "node": "Filter – Validar Status y Idea Semilla",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter – Validar Status y Idea Semilla": {
+      "main": [
+        [
+          {
+            "node": "RAG – Recuperar Directrices de Marca",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RAG – Recuperar Directrices de Marca": {
+      "main": [
+        [
+          {
+            "node": "Preparar Contexto RAG para AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Contexto RAG para AI Agent": {
+      "main": [
+        [
+          {
+            "node": "AI Agent – Redactor LinkedIn (Claude 3.5 Sonnet)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent – Redactor LinkedIn (Claude 3.5 Sonnet)": {
+      "main": [
+        [
+          {
+            "node": "Airtable Update – Guardar Contenido Generado (Sin tocar Aprobado)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Airtable Trigger – Escucha Aprobación Manual (HITL)": {
+      "main": [
+        [
+          {
+            "node": "Filter – Aprobado IGUAL TRUE (Control HITL)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter – Aprobado IGUAL TRUE (Control HITL)": {
+      "main": [
+        [
+          {
+            "node": "Preparar Payload LinkedIn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Payload LinkedIn": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Airtable Update – Marcar como Publicado": {
+      "main": [
+        [
+          {
+            "node": "Log – Pipeline HITL Completado con Éxito",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent – Redactor LinkedIn (Claude 3.5 Sonnet)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Airtable Update – Guardar Contenido Generado (Sin tocar Aprobado)": {
+      "main": [
+        [
+          {
+            "node": "Envia mail de aviso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent – Redactor LinkedIn (Claude 3.5 Sonnet)",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Airtable Update – Marcar como Publicado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "45ee7232-6001-4e88-b805-7b77d9872b04",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "015b39f626c0e6370ffeec62f96bfd9beb09497a8e6e455903ef9b1b9c2f5d7b"
+  },
+  "nodeGroups": [],
+  "id": "onUp0wls2kvRjmxs",
+  "tags": []
+}
