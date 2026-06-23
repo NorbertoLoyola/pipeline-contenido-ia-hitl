@@ -135,7 +135,7 @@ Este esquema permite desacoplar la generación del contenido respecto del mecani
 
 | Estrategia | Descripción |
 |------------|-------------|
-| Modelos Especializados | Claude 3.5 Sonnet / Gemini generan el contenido utilizando contexto RAG. |
+| Modelos Especializados | Gemini generan el contenido utilizando contexto RAG. |
 | Procesamiento Local | Validaciones, filtros y transformaciones se realizan mediante JavaScript y nodos nativos de n8n, evitando llamadas innecesarias a APIs. |
 | Procesamiento por Lotes | Airtable procesa registros mediante intervalos programados, reduciendo ejecuciones duplicadas y consumo de tokens. |
 
