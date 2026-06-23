@@ -1,58 +1,216 @@
-# Pipeline de Contenido Autónomo con HITL e Infraestructura Resiliente
+# 🚀 Pipeline de Contenido Autónomo con HITL e Infraestructura Resiliente
 
 ## 📌 Descripción del Proyecto
-Este ecosistema automatiza el ciclo completo de creación, curación y publicación de contenidos B2B para LinkedIn. El sistema combina las capacidades de razonamiento de un Agente de IA con un estricto control humano en el bucle (Human-In-The-Loop) y una arquitectura diseñada para tolerar fallos de red o de API externas.
 
-## 🛠️ Arquitectura y Componentes
-1. **Fase de Generación (RAG Activo):** El sistema escucha nuevas ideas semilla en Airtable, recupera las directrices de marca corporativas de una base de conocimiento y prepara el contexto estructurado para el Agente de IA.
-2. **Punto de Pausa HITL (Human-In-The-Loop):** La propuesta generada se almacena en estado "Pendiente de Aprobación" y se despacha una alerta automatizada por correo electrónico (SMTP). El flujo externo se congela hasta que un humano valida el texto y activa manualmente el checkbox de aprobación.
-3. **Fase de Publicación y Resiliencia (Manejo de Errores):** Al recibir la aprobación, se prepara el payload para redes sociales. El nodo de comunicación externa cuenta con una bifurcación activa ante errores (`On Error: Continue`). Si la API externa experimenta caídas o rebotes de credenciales, el sistema captura el error de forma elegante y actualiza el registro en Airtable a "Fallo de Conexión / Revisar API" en lugar de romper el flujo general.
+Este proyecto implementa un ecosistema automatizado para la generación, revisión y publicación de contenido B2B en LinkedIn.
 
----
+La solución combina:
 
-## 🔗 Enlaces Obligatorios de Entrega
+- 🤖 Inteligencia Artificial para la generación de contenido.
+- 👤 Human-in-the-Loop (HITL) para la aprobación manual.
+- 📚 RAG (Retrieval-Augmented Generation) para mantener la coherencia con la marca.
+- 🛡️ Arquitectura resiliente con manejo de errores y recuperación ante fallos.
 
-* **Base de Datos (Airtable - Modo Lectura):** https://airtable.com/invite/l?inviteId=inv3LT4FV51T2SEul&inviteToken=e1d69e59e26089409478958a1797cf710d6eff6e998ac1cdc9bd258fc4fdec58&utm_medium=email&utm_source=product_team&utm_content=transactional-alerts
-* **Evidencias de Ejecución:** Las capturas de pantalla que demuestran el flujo en el lienzo (n8n completo.png), la actualización de registros en Airtable (Airtable con contenido.png) y el correo de notificación recibido por SMTP (Gmail.png) se encuentran disponibles en la raíz de este repositorio.
+El objetivo es automatizar el ciclo completo de publicación garantizando calidad, seguridad y continuidad operativa.
 
 ---
 
-## 🏛️ SECCIÓN ESTRATÉGICA DE EVALUACIÓN (RÚBRICA CORPORATIVA)
+# 🏗️ Arquitectura del Pipeline
 
-### 📘 1. Manual Operativo de Estructuras de Datos (20%)
-El intercambio técnico de información entre la base de datos relacional (Airtable) y las automatizaciones en n8n se realiza estructurando las variables mediante el siguiente esquema de transferencia de datos en formato JSON (Payload estandarizado del pipeline):
+## 1️⃣ Generación de Contenido (RAG Activo)
+
+El flujo monitorea nuevas ideas almacenadas en Airtable.
+
+Para cada registro:
+
+- Recupera las directrices de marca desde la base de conocimiento.
+- Construye el contexto.
+- Envía el contexto al Agente de IA.
+- Genera el contenido listo para revisión.
+
+---
+
+## 2️⃣ Human-in-the-Loop (HITL)
+
+El contenido generado **nunca se publica automáticamente**.
+
+El proceso:
+
+- Guarda el contenido en Airtable.
+- Cambia el estado a **Pendiente de aprobación**.
+- Envía un correo electrónico mediante SMTP.
+- Detiene completamente el flujo.
+
+La ejecución continúa únicamente cuando un usuario marca el campo **Aprobado** en Airtable.
+
+---
+
+## 3️⃣ Publicación y Resiliencia
+
+Una vez aprobado:
+
+- Se genera el payload para LinkedIn.
+- Se ejecuta la llamada HTTP.
+
+El nodo HTTP utiliza:
+
+```
+On Error → Continue
+```
+
+Si ocurre un problema:
+
+- caída de la API
+- credenciales inválidas
+- timeout
+- error de red
+
+el flujo **no se detiene**.
+
+En cambio:
+
+- captura el error
+- actualiza Airtable con el estado
+
+```
+Fallo de Conexión / Revisar API
+```
+
+y finaliza correctamente sin afectar el resto del sistema.
+
+---
+
+# 🔗 Recursos del Proyecto
+
+## Base de Datos (Airtable)
+
+> Modo lectura
+
+https://airtable.com/invite/l?inviteId=inv3LT4FV51T2SEul&inviteToken=e1d69e59e26089409478958a1797cf710d6eff6e998ac1cdc9bd258fc4fdec58&utm_medium=email&utm_source=product_team&utm_content=transactional-alerts
+
+---
+
+## Evidencias
+
+En la raíz del repositorio se incluyen las siguientes evidencias:
+
+- 📷 n8n completo.png
+- 📷 Airtable con contenido.png
+- 📷 Gmail.png
+
+---
+
+# 📋 Evaluación del Proyecto
+
+## 📘 1. Manual Operativo de Estructuras de Datos (20%)
+
+La comunicación entre Airtable y n8n utiliza un payload JSON estandarizado.
 
 ```json
 {
   "recordId": "recXXXXX",
   "ideaSemilla": "Idea inicial ingresada por el usuario",
   "autor": "Cuenta Principal",
-  "contenido": "Texto final generado por la Inteligencia Artificial",
+  "contenido": "Texto generado por IA",
   "postPayload": {
-    "author": "urn:li:person:[www.linkedin.com/in/norberto-loyola](https://www.linkedin.com/in/norberto-loyola)",
+    "author": "urn:li:person:norberto-loyola",
     "lifecycleState": "PUBLISHED",
     "specificContent": {
       "com.linkedin.ugc.ShareContent": {
-        "shareCommentary": { "text": "Cuerpo del post con viñetas y CTA" },
+        "shareCommentary": {
+          "text": "Contenido del post"
+        },
         "shareMediaCategory": "NONE"
       }
     }
   }
 }
+```
+
+Este esquema permite desacoplar la generación del contenido respecto del mecanismo de publicación.
 
 ---
-### 💰 2. Estrategia de Optimización de Costos y Recursos (20%)
-Para certificar una reducción del gasto presupuestario superior al 50% en la ejecución de este ecosistema a gran escala, se implementan las siguientes políticas:
 
-Matriz de Decisión de Modelos: Se delega la redacción densa y el análisis de contexto de marca a modelos avanzados (Claude 3.5 Sonnet / Gemini), asegurando calidad sin alucinaciones.
+# 💰 2. Optimización de Costos y Recursos (20%)
 
-Procesamiento Mecánico sin Costo: Toda la lógica de control, filtros de estado ("Generando", "Pendiente") y formateo de texto se ejecutan de forma nativa mediante código JavaScript y nodos condicionales dentro de n8n, evitando llamadas redundantes e innecesarias a las APIs de Inteligencia Artificial.
+| Estrategia | Descripción |
+|------------|-------------|
+| Modelos Especializados | Claude 3.5 Sonnet / Gemini generan el contenido utilizando contexto RAG. |
+| Procesamiento Local | Validaciones, filtros y transformaciones se realizan mediante JavaScript y nodos nativos de n8n, evitando llamadas innecesarias a APIs. |
+| Procesamiento por Lotes | Airtable procesa registros mediante intervalos programados, reduciendo ejecuciones duplicadas y consumo de tokens. |
 
-Consolidación en Lotes (Batches): El trigger de Airtable procesa de manera controlada por intervalos de tiempo (cronograma por minutos/horas), mitigando ráfagas de ejecuciones duplicadas que consuman cuotas de tokens activos.
+---
 
-###🔒 3. Malla de Seguridad, Privacidad y Resiliencia (20%)
-Políticas de Minimización de Datos: El flujo de datos en n8n se restringe únicamente a los campos de texto del contenido a publicar (Idea Semilla, Contenido Generado). Se omiten por completo del pipeline datos sensibles corporativos, contraseñas o información de identidad protegida, cumpliendo con las normativas globales de privacidad.
+# 🔒 3. Seguridad, Privacidad y Resiliencia (20%)
 
-Rutas de Contingencia Activas: Ante cualquier fallo de red o error de respuesta de APIs externas, el nodo HTTP Request cuenta con un manejador de errores (On Error ➔ Continue (using error output)). Esto evita que el software colapse en un bucle infinito y desvía la información hacia una rama secundaria que actualiza el estado en Airtable a "Fallo de Conexión / Revisar API" para notificar visualmente al negocio.
+## Minimización de Datos
 
-Semáforos de Validación (Human-in-the-loop): El ecosistema implementa un bloqueo de seguridad obligatorio. Ningún contenido generado por la IA puede interactuar con canales públicos o externos sin la activación manual del checkbox Aprobado por parte de un operador humano en Airtable, mitigando al 100% riesgos reputacionales o legales por alucinaciones.
+El pipeline únicamente procesa:
+
+- Idea Semilla
+- Contenido Generado
+
+No se transfieren:
+
+- credenciales
+- datos personales
+- información sensible
+
+cumpliendo con buenas prácticas de privacidad.
+
+---
+
+## Manejo de Errores
+
+El nodo HTTP Request implementa:
+
+```
+On Error → Continue (Using Error Output)
+```
+
+Ante cualquier fallo:
+
+- el flujo continúa
+- el error queda registrado
+- Airtable actualiza automáticamente el estado a:
+
+```
+Fallo de Conexión / Revisar API
+```
+
+---
+
+## Human-in-the-Loop
+
+Antes de cualquier publicación:
+
+✅ El contenido debe ser aprobado manualmente.
+
+La publicación sólo ocurre cuando un operador activa el checkbox **Aprobado** en Airtable.
+
+Este mecanismo elimina publicaciones automáticas no verificadas y reduce significativamente riesgos legales o reputacionales.
+
+---
+
+# ✅ Tecnologías Utilizadas
+
+- n8n
+- Airtable
+- OpenAI / Claude / Gemini
+- SMTP
+- LinkedIn API
+- JavaScript
+- JSON
+
+---
+
+# 🎯 Características Principales
+
+- Generación automática de contenido
+- Integración con RAG
+- Human-in-the-Loop (HITL)
+- Publicación automatizada
+- Manejo robusto de errores
+- Actualización automática de estados
+- Arquitectura resiliente
+- Optimización de costos mediante procesamiento híbrido
