@@ -39,3 +39,20 @@ El intercambio técnico de información entre la base de datos relacional (Airta
     }
   }
 }
+
+---
+### 💰 2. Estrategia de Optimización de Costos y Recursos (20%)
+Para certificar una reducción del gasto presupuestario superior al 50% en la ejecución de este ecosistema a gran escala, se implementan las siguientes políticas:
+
+Matriz de Decisión de Modelos: Se delega la redacción densa y el análisis de contexto de marca a modelos avanzados (Claude 3.5 Sonnet / Gemini), asegurando calidad sin alucinaciones.
+
+Procesamiento Mecánico sin Costo: Toda la lógica de control, filtros de estado ("Generando", "Pendiente") y formateo de texto se ejecutan de forma nativa mediante código JavaScript y nodos condicionales dentro de n8n, evitando llamadas redundantes e innecesarias a las APIs de Inteligencia Artificial.
+
+Consolidación en Lotes (Batches): El trigger de Airtable procesa de manera controlada por intervalos de tiempo (cronograma por minutos/horas), mitigando ráfagas de ejecuciones duplicadas que consuman cuotas de tokens activos.
+
+###🔒 3. Malla de Seguridad, Privacidad y Resiliencia (20%)
+Políticas de Minimización de Datos: El flujo de datos en n8n se restringe únicamente a los campos de texto del contenido a publicar (Idea Semilla, Contenido Generado). Se omiten por completo del pipeline datos sensibles corporativos, contraseñas o información de identidad protegida, cumpliendo con las normativas globales de privacidad.
+
+Rutas de Contingencia Activas: Ante cualquier fallo de red o error de respuesta de APIs externas, el nodo HTTP Request cuenta con un manejador de errores (On Error ➔ Continue (using error output)). Esto evita que el software colapse en un bucle infinito y desvía la información hacia una rama secundaria que actualiza el estado en Airtable a "Fallo de Conexión / Revisar API" para notificar visualmente al negocio.
+
+Semáforos de Validación (Human-in-the-loop): El ecosistema implementa un bloqueo de seguridad obligatorio. Ningún contenido generado por la IA puede interactuar con canales públicos o externos sin la activación manual del checkbox Aprobado por parte de un operador humano en Airtable, mitigando al 100% riesgos reputacionales o legales por alucinaciones.
