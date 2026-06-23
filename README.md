@@ -196,7 +196,7 @@ Este mecanismo elimina publicaciones automáticas no verificadas y reduce signif
 
 - n8n
 - Airtable
-- OpenAI / Claude / Gemini
+- OpenAI / Gemini
 - SMTP
 - LinkedIn API
 - JavaScript
