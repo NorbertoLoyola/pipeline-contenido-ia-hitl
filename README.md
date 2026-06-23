@@ -14,3 +14,28 @@ Este ecosistema automatiza el ciclo completo de creación, curación y publicaci
 
 * **Base de Datos (Airtable - Modo Lectura):** https://airtable.com/invite/l?inviteId=inv3LT4FV51T2SEul&inviteToken=e1d69e59e26089409478958a1797cf710d6eff6e998ac1cdc9bd258fc4fdec58&utm_medium=email&utm_source=product_team&utm_content=transactional-alerts
 * **Evidencias de Ejecución:** Las capturas de pantalla que demuestran el flujo en el lienzo (n8n completo.png), la actualización de registros en Airtable (Airtable con contenido.png) y el correo de notificación recibido por SMTP (Gmail.png) se encuentran disponibles en la raíz de este repositorio.
+
+---
+
+## 🏛️ SECCIÓN ESTRATÉGICA DE EVALUACIÓN (RÚBRICA CORPORATIVA)
+
+### 📘 1. Manual Operativo de Estructuras de Datos (20%)
+El intercambio técnico de información entre la base de datos relacional (Airtable) y las automatizaciones en n8n se realiza estructurando las variables mediante el siguiente esquema de transferencia de datos en formato JSON (Payload estandarizado del pipeline):
+
+```json
+{
+  "recordId": "recXXXXX",
+  "ideaSemilla": "Idea inicial ingresada por el usuario",
+  "autor": "Cuenta Principal",
+  "contenido": "Texto final generado por la Inteligencia Artificial",
+  "postPayload": {
+    "author": "urn:li:person:[www.linkedin.com/in/norberto-loyola](https://www.linkedin.com/in/norberto-loyola)",
+    "lifecycleState": "PUBLISHED",
+    "specificContent": {
+      "com.linkedin.ugc.ShareContent": {
+        "shareCommentary": { "text": "Cuerpo del post con viñetas y CTA" },
+        "shareMediaCategory": "NONE"
+      }
+    }
+  }
+}
