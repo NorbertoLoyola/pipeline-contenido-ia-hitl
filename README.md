@@ -214,3 +214,7 @@ Este mecanismo elimina publicaciones automáticas no verificadas y reduce signif
 - Actualización automática de estados
 - Arquitectura resiliente
 - Optimización de costos mediante procesamiento híbrido
+
+## 🎥 Video de Demostración del Ecosistema
+Puedes ver el funcionamiento en tiempo real de la automatización, la validación humana (HITL) y la resiliencia del pipeline en el siguiente enlace:
+👉 [Ver Video de Demostración en GoogleDrive](https://drive.google.com/file/d/1jqbkT9Bf1knvJT5Qz_zwnJAlhR_ycLa2/view?usp=sharing)
